@@ -2,39 +2,31 @@ import type { PlatformAccessory, Service, PlatformConfig } from 'homebridge'
 import { exec } from 'child_process'
 
 import type { IRPlatform } from './IRPlatform.js'
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js'
+import { PLATFORM_NAME, PLUGIN_NAME, FIXED_LIGHT_ID } from './settings.js'
+import { LightLevel } from './types.js'
 
 enum Power {
   ON = 'ON',
   OFF = 'OFF',
 }
 
-enum LightLevel {
-  LEVEL_1 = 1,
-  LEVEL_2 = 2,
-  LEVEL_3 = 3,
-  LEVEL_4 = 4,
-}
-
-const FIXED_ID = 'fixed:ir:light'
-
 export class IRLightAccessory {
   public accessory!: PlatformAccessory
   private service!: Service
   private state = {
     power: Power.OFF as Power,
-    level: LightLevel.LEVEL_1 as LightLevel,
+    level: LightLevel.LEVEL_1 as LightLevel, // level 1 is the highest
   }
 
   constructor(
     private readonly platform: IRPlatform,
     private readonly configs: PlatformConfig,
   ) {
-    // don nothing.
+    // do nothing
   }
 
   async init() {
-    const uuid = this.platform.api.hap.uuid.generate(FIXED_ID)
+    const uuid = this.platform.api.hap.uuid.generate(FIXED_LIGHT_ID)
 
     const existingAccessory = this.platform.accessories.find(
       (accessory) => accessory.UUID === uuid,
@@ -57,7 +49,10 @@ export class IRLightAccessory {
 
     this.accessory
       .getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, FIXED_ID)
+      .setCharacteristic(
+        this.platform.Characteristic.SerialNumber,
+        FIXED_LIGHT_ID,
+      )
 
     this.service =
       this.accessory.getService(this.platform.Service.Lightbulb) ||
@@ -72,28 +67,29 @@ export class IRLightAccessory {
       .getCharacteristic(this.platform.Characteristic.On)
       .onSet(async (value) => {
         const newState = value ? Power.ON : Power.OFF
-        if (newState !== this.state.power) { 
+        if (newState !== this.state.power) {
           this.state.power = newState
           exec('irsend SEND_ONCE livingroom_light TOGGLE')
         }
       })
       .onGet(() => this.state.power === Power.ON)
-    
+
     /*
     this.service
       .getCharacteristic(this.platform.Characteristic.Brightness)
       .setProps({ minValue: 1, maxValue: 4, minStep: 1 })
       .onSet(async (value) => {
-        const a = value as number
-        const b = this.state.level as number
-        const step = b > a ? b - a : b + 4 - a
+        const newLevel = value as number
+        const currentLevel = this.state.level as number
+        const distance =
+          newLevel > currentLevel
+            ? newLevel - currentLevel
+            : newLevel + 4 - currentLevel
 
-        for (let i = 0; i < step; i++) {
+        for (let i = 0; i < distance; i++) {
           exec(`irsend SEND_ONCE livingroom_light LEVEL`)
           await new Promise((resolve) => setTimeout(resolve, 1000))
         }
-
-        this.state.level = value as LightLevel
       })
       .onGet(() => this.state.level)
     */

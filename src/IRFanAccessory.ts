@@ -2,25 +2,8 @@ import type { PlatformAccessory, Service, PlatformConfig } from 'homebridge'
 import { exec } from 'child_process'
 
 import type { IRPlatform } from './IRPlatform.js'
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js'
-
-enum Power {
-  ON = 'ON',
-  OFF = 'OFF',
-}
-
-enum FanLevel {
-  LEVEL_1 = 1,
-  LEVEL_2 = 2,
-  LEVEL_3 = 3,
-}
-
-enum FanDirection {
-  DOWN = 'DOWN',
-  UP = 'UP',
-}
-
-const FIXED_ID = 'fixed:ir:fan'
+import { PLATFORM_NAME, PLUGIN_NAME, FIXED_FAN_ID } from './settings.js'
+import { FanDirection, FanLevel, Power } from './types.js'
 
 export class IRFanAccessory {
   public accessory!: PlatformAccessory
@@ -35,11 +18,11 @@ export class IRFanAccessory {
     private readonly platform: IRPlatform,
     private readonly configs: PlatformConfig,
   ) {
-    // don nothing.
+    // do nothing
   }
 
   async init() {
-    const uuid = this.platform.api.hap.uuid.generate(FIXED_ID)
+    const uuid = this.platform.api.hap.uuid.generate(FIXED_FAN_ID)
 
     const existingAccessory = this.platform.accessories.find(
       (accessory) => accessory.UUID === uuid,
@@ -62,7 +45,10 @@ export class IRFanAccessory {
 
     this.accessory
       .getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, FIXED_ID)
+      .setCharacteristic(
+        this.platform.Characteristic.SerialNumber,
+        FIXED_FAN_ID,
+      )
 
     this.service =
       this.accessory.getService(this.platform.Service.Fanv2) ||
@@ -72,7 +58,7 @@ export class IRFanAccessory {
       this.platform.Characteristic.Name,
       `${this.configs.name} Fan`,
     )
-  
+
     this.service
       .getCharacteristic(this.platform.Characteristic.Active)
       .onSet(async (value) => {
@@ -99,12 +85,22 @@ export class IRFanAccessory {
 
     this.service
       .getCharacteristic(this.platform.Characteristic.RotationSpeed)
-      .setProps({ minValue: 1, maxValue: 3, minStep: 1 })
-      .onSet(async (value) => {
-        exec(`irsend SEND_ONCE livingroom_fan LEVEL_${value}`)
-        this.state.level = value as FanLevel
+      .setProps({ minValue: 1, maxValue: 100, minStep: 1 })
+      .onSet((value) => {
+        const level = Math.ceil((value as number) / 33)
+        if (level === 0) {
+          exec('irsend SEND_ONCE livingroom_fan OFF')
+          this.state.power = Power.OFF
+          this.service.updateCharacteristic(
+            this.platform.Characteristic.Active,
+            false,
+          )
+        } else if (level !== this.state.level) {
+          exec(`irsend SEND_ONCE livingroom_fan LEVEL_${level}`)
+        }
+        this.state.level = level as FanLevel
       })
-      .onGet(() => this.state.level)
+      .onGet(() => this.state.level * 33)
 
     const { CLOCKWISE, COUNTER_CLOCKWISE } =
       this.platform.Characteristic.RotationDirection
