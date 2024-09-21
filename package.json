@@ -2,7 +2,7 @@
   "name": "homebridge-qb-house-ir",
   "displayName": "QB House IR",
   "type": "module",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "QB House IR",
   "author": "Jason Lee",
   "license": "Apache-2.0",
