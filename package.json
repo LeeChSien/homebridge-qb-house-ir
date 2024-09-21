@@ -3,7 +3,6 @@
   "displayName": "QB House IR",
   "type": "module",
   "version": "1.0.0",
-  "private": true,
   "description": "QB House IR",
   "author": "Jason Lee",
   "license": "Apache-2.0",
