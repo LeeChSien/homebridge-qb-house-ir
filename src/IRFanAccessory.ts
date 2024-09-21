@@ -99,6 +99,10 @@ export class IRFanAccessory {
           exec(`irsend SEND_ONCE livingroom_fan LEVEL_${level}`)
         }
         this.state.level = level as FanLevel
+        this.service.updateCharacteristic(
+          this.platform.Characteristic.RotationSpeed,
+          level * 33,
+        )
       })
       .onGet(() => this.state.level * 33)
 
