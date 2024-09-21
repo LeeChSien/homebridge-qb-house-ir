@@ -13,7 +13,7 @@ Add new platform to Homebridge config json.
 "platforms": [
   {
     "platform": "QBHouseIR",
-    "name": "QB House IR devices"
+    "name": "QB House IR"
   }
 ]
 ```
